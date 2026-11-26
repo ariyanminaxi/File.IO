@@ -201,101 +201,96 @@ Extension_types ={
     ".p12": "Certificates",
     ".pfx": "Certificates",
 }
+dest_location = {
+    # Pictures
+    "Images": "Pictures/FO_sample",
+
+    # Videos
+    "Videos": "Videos/FO_sample",
+    "Video_Projects": "Videos/FO_sample/projects",
+
+    # Music
+    "Audio": "Music/FO_sample",
+
+    # Documents
+    "Documents": "Documents/FO_sample",
+    "Spreadsheets": "Documents/FO_sample/spreadsheets",
+    "Presentations": "Documents/FO_sample/presentations",
+    "Certificates": "Documents/FO_sample/certificates",
+    "Ebooks": "Documents/FO_sample/ebooks",
+
+    # Downloads
+    "Archives": "Downloads/FO_sample/archives",
+    "Applications": "Downloads/FO_sample/applications",
+    "Torrents": "Downloads/FO_sample/torrents",
+
+    # Documents - Development
+    "Code": "Documents/FO_sample/code",
+    "Data": "Documents/FO_sample/data",
+    "Configuration": "Documents/FO_sample/configuration",
+
+    # Documents - Design
+    "Fonts": "Documents/FO_sample/design/fonts",
+    "3D_Models": "Documents/FO_sample/design/3d_models",
+
+    # System
+    "Disk_Images": "Documents/FO_sample/backups/disk_images",
+    "Backups": "Documents/FO_sample/backups",
+    "Logs": "Documents/FO_sample/logs",
+    "Others": "Documents/Other_files"
+}
+
+class PlanItem:
+    def __init__(self, source, cat) -> None:
+        self.source = source
+        self.category = cat
+        self.dest_folder = Path(r"D:\VS_code\Projects\File_Automation\sample_folder\_organized") / Path(self.category) 
+        self.dest_file = Path(self.dest_folder / Path(self.source).name)
+        self.conflict = Path(self.dest_file).exists()
+
+    # To display the data the object holds
+    def display(self) -> str:
+        print("|-----{Item Data}-----}")
+        print(f"Source : {self.source}")
+        print(f"Category : {self.category}")
+        print(f"Destination folder : {self.dest_folder}")
+        print(f"Destination file : {self.dest_file}")
+        print(f"Conflict : {self.conflict}")
 
 class Planner:
-    def __init__(self, path):
+    def __init__(self, path, recursive = False) -> None:
         self.path =Path(path)
+        self.recursive = recursive
         self.Build_plan()
     
-    def Build_plan(self):
-        self.plan = []
+    def Build_plan(self) -> dict[PlanItem]:
+        self.plan = {}
         self.skipped = []
             # |----{Scanning for files to move}----|
         # We need to check if the path is a folder or a file
         if self.path.is_file(): # If the path contains only one file.
-            self.files = [self.path]
+            self.files_ = [self.path]
         elif self.path.is_dir(): # If the path contains a folder dir
-            self.files_ = Scanner(self.path).files
+            self.sc = Scanner(self.path, self.recursive)
+            self.files_ = self.sc.files
+        else:
+            raise FileNotFoundError(f"Path not found: {self.path}")
 
             # |----{Getting Category}----|
         # This separates between plan and skipped.
         for file in self.files_:
                 if(self.check(file_path=file)):
-                    self.plan.append(f"{file}:{File_Classifier(file).get_category()}")
+                    self.plan[file]=PlanItem(file,File_Classifier(file).get_category())
                 else:
                     self.skipped.append(file)
-
-            # |----{Execution of Plan}----|
-        # This will execute the move sequence for plan list
-        if self.plan:
-            # Format of p_file is that "File_Path : File_Category"
-            for p_file in self.plan:
-                self.p_path = Path(p_file.split(":")[0])
-                self.p_cat = p_file.split(":")[1]
-                Executor(self.p_cat, self.get_c_path(self.p_cat).mkdir(parents=True, exist_ok=True)).dry_run()
-        else:
-            print("No files planned to move.")
+        return self.plan
 
     # Checks for any hidden folders 
-    def check(self, file_path):
+    def check(self, file_path) -> bool:
         if Path(file_path).name.startswith("."):
             return False
         else:
             return True      
-    
-    # Get Path for the category
-    def get_c_path(self, cat):
-        self.cat = cat
-        if self.cat == "Images":
-            return Path(r"C:\Users\minax\OneDrive\Pictures\FOA_folder")
-
-        elif self.cat == "Videos":
-            return Path(r"C:\Users\minax\Videos\FOA_Folder")
-
-        elif self.cat == "Audio":
-            return Path(r"C:\Users\minax\Music\FOA_Folder")
-
-        elif self.cat in ("Documents", "Spreadsheets", "Presentations", "Ebooks"):
-            return Path(r"C:\Users\minax\OneDrive\Documents\FOA_Folder")
-
-        elif self.cat == "Archives":
-            return Path(r"C:\Users\minax\Downloads\FOA_Folder")
-
-        elif self.cat == "Code":
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Code")
-
-        elif self.cat in ("Data", "Configuration"):
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Data")
-
-        elif self.cat == "Applications":
-            return Path(r"C:\Users\minax\Downloads\FOA_Folder\Applications")
-
-        elif self.cat == "Fonts":
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Fonts")
-
-        elif self.cat == "3D_Models":
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\3D_Models")
-
-        elif self.cat == "Video_Projects":
-            return Path(r"C:\Users\minax\Videos\FOA_Folder\Video_Projects")
-
-        elif self.cat == "Disk_Images":
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Disk_Images")
-
-        elif self.cat == "Backups":
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Backups")
-
-        elif self.cat == "Torrents":
-            return Path(r"C:\Users\minax\Downloads\FOA_Folder\Torrents")
-
-        elif self.cat == "Logs":
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Logs")
-
-        elif self.cat == "Certificates":
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Certificates")
-
-        else:
-            return Path(r"C:\Users\minax\Documents\FOA_Folder\Other")
 
 class File_Classifier:
     def __init__(self, file_path):
@@ -306,20 +301,17 @@ class File_Classifier:
         return Extension_types.get(self.extension, "Others")
              
 class Scanner:
-    def __init__(self, file_path):
+    def __init__(self, file_path, recursive=False):
         self.file_path = file_path
+        self.recursive = recursive
         self.files = self.scan(self.file_path)
-        recursive = False
     def scan(self, file_path):
-        recursive = False
         files = []
         for file in Path(file_path).iterdir():
-            if file.is_dir() and (not file.name.startswith(".")):
+            if file.is_dir() and (not file.name.startswith(".")) and (self.recursive):
                 files.extend(self.scan(file))
-                recursive = True
             elif file.is_file():
                 files.append(file)
-                recursive = recursive
         return files
 
 class Executor:
@@ -348,5 +340,6 @@ class Executor:
 if __name__ == "__main__":
     FP = str(input("Enter File path: "))
     sc = Planner(FP)
-    print(sc.Build_plan())
+    for ds in sc.plan.values():
+        print(ds.display())
     
