@@ -1,5 +1,7 @@
 from pathlib import Path
-
+from typing import Any
+import uuid
+import shutil
 #File Detector 
 Extension_types ={
     # Images
@@ -240,7 +242,7 @@ dest_location = {
     "Others": "Documents/Other_files"
 }
 
-class PlanItem:
+class PlanItem: # Planner calls this class to get the destianation path
     def __init__(self, source, cat) -> None:
         self.source = source
         self.category = cat
@@ -257,12 +259,12 @@ class PlanItem:
         print(f"Destination file : {self.dest_file}")
         print(f"Conflict : {self.conflict}")
 
-class Planner:
+class Planner: # Main class
     def __init__(self, path, recursive = False) -> None:
         self.path =Path(path)
         self.recursive = recursive
         self.Build_plan()
-    
+
     def Build_plan(self) -> dict[PlanItem]:
         self.plan = {}
         self.skipped = []
@@ -292,7 +294,7 @@ class Planner:
         else:
             return True      
 
-class File_Classifier:
+class File_Classifier: # Planner calls this for to get category info 
     def __init__(self, file_path):
         self.file_path = file_path
     def get_category(self):
@@ -300,11 +302,13 @@ class File_Classifier:
         self.extension = Path(self.name).suffix  # Here remember basename will give the name of the file with extension and suffixes will give the extension but suffixes can't work with Path function
         return Extension_types.get(self.extension, "Others")
              
-class Scanner:
+class Scanner: # Planner calls this to get every file in the folder and sub-folders
     def __init__(self, file_path, recursive=False):
         self.file_path = file_path
         self.recursive = recursive
         self.files = self.scan(self.file_path)
+    
+    #This is used to scan all the files inside a path/directory 
     def scan(self, file_path):
         files = []
         for file in Path(file_path).iterdir():
@@ -315,31 +319,32 @@ class Scanner:
         return files
 
 class Executor:
-    def __init__(self, category, destination_path):
-        self.d_path = Path(destination_path)
-        self.cat = category    
+    def __init__(self, plan, dry_run=True):
+        self.plan = plan
+        self.moved = []
+        self.errors = []
+        self.count=0
+        if dry_run:
+            self.dry_run()
 
     #A dry run to check if it is working or not
     def dry_run(self):
-        would_moved=[]
-        errors=[]
-        if self.d_path in Scanner(self.d_path.parent.name):
-            errors.append(self.d_path)
-        else:
-            would_moved.append(self.d_path)
-        print(f"{self.cat} --> {self.d_path}")
+        for Dpath in dict(self.plan).values():
+            self.moved.append(self.check(Dpath.dest_file))
+        print(f"No. of total conflicts found: {self.count}")
         
-    def run(self):
-        moved = []
-        errors = []
-        if self.d_path in Scanner(self.d_path.parent.name):
-            errors.append(self.d_path)
-        else:
-            moved.append(self.d_path)
+    def check(self, path) -> Path:
+        self.path=Path(path)
+        while self.path.exists():
+            self.path = self.path.with_stem(f"{self.path.stem}_{uuid.uuid4().hex[:6]}")
+            self.count+=1
+        return self.path
         
 if __name__ == "__main__":
     FP = str(input("Enter File path: "))
     sc = Planner(FP)
-    for ds in sc.plan.values():
-        print(ds.display())
+    ex = Executor(sc.plan)
+    print(ex.moved)
+    
+    
     
