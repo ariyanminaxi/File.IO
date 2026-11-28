@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 import uuid
 import shutil
 #File Detector 
@@ -249,6 +248,7 @@ class PlanItem: # Planner calls this class to get the destianation path
         self.dest_folder = Path(r"D:\VS_code\Projects\File_Automation\sample_folder\_organized") / Path(self.category) 
         self.dest_file = Path(self.dest_folder / Path(self.source).name)
         self.conflict = Path(self.dest_file).exists()
+        self.error_msg = None
 
     # To display the data the object holds
     def display(self) -> str:
@@ -319,13 +319,11 @@ class Scanner: # Planner calls this to get every file in the folder and sub-fold
         return files
 
 class Executor:
-    def __init__(self, plan, dry_run=True):
+    def __init__(self, plan):
         self.plan = plan
         self.moved = []
         self.errors = []
         self.count=0
-        if dry_run:
-            self.dry_run()
 
     #A dry run to check if it is working or not
     def dry_run(self):
@@ -333,6 +331,20 @@ class Executor:
             self.moved.append(self.check(Dpath.dest_file))
         print(f"No. of total conflicts found: {self.count}")
         
+    def run(self):
+        for Dpath in dict(self.plan).values():
+            try:
+                Dpath.dest_file = self.check(Dpath.dest_file)
+                Path(Dpath.dest_folder).mkdir(parents=True, exist_ok=True)
+                shutil.move(Dpath.source, Dpath.dest_file)
+                self.moved.append(Dpath.dest_file)
+            except OSError as e:
+                Dpath.error_msg = e
+                self.errors.append(Dpath)
+        print(f"No. of total conflicts found: {self.count}")
+        print(f"No. of errors: {len(self.errors)}")
+        print(f"Files moved: {len(self.moved)}")
+
     def check(self, path) -> Path:
         self.path=Path(path)
         while self.path.exists():
@@ -344,7 +356,7 @@ if __name__ == "__main__":
     FP = str(input("Enter File path: "))
     sc = Planner(FP)
     ex = Executor(sc.plan)
-    print(ex.moved)
+    ex.run()
     
     
     
